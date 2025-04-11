@@ -2,6 +2,8 @@ package niroj.movie.services;
 
 import niroj.movie.models.UserModel;
 import niroj.movie.repositories.UserRepository;
+import niroj.movie.security.JwtUtil;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -14,6 +16,9 @@ public class UserService {
 
     @Autowired
     private UserRepository userRepository;
+
+        @Autowired
+    private JwtUtil jwtTokenUtil;
 
     private BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
@@ -31,8 +36,14 @@ public class UserService {
     public Map<String, Object> loginUser(String email, String password) {
         Optional<UserModel> user = userRepository.findByEmail(email);
         if (user.isPresent() && passwordEncoder.matches(password, user.get().getPassword())) {
-            return Map.of("user", user.get());
+            return Map.of("user", user.get(), "token", jwtTokenUtil.generateToken(email));
         }
         return Map.of("error", "Invalid credentials");
     }
+
+            // Fetch complete user details by email
+            public Optional<UserModel> getUserDetailsByEmail(String token) {
+                String email =  jwtTokenUtil.extractEmail(token);
+                return userRepository.findByEmail(email);
+            }
 }

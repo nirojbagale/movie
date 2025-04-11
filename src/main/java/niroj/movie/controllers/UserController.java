@@ -8,10 +8,13 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 
+import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @RestController
@@ -21,6 +24,17 @@ public class UserController {
     @Autowired
     private UserService userService;
     
+    @GetMapping("/fetch-user")
+    public ResponseEntity<UserModel> getUserInfo(HttpServletRequest request) {
+        String token = getJwtFromCookies(request);
+        System.err.println(token);
+        if (token == null) {
+            return ResponseEntity.status(401).build();
+        }
+    
+        Optional<UserModel> user = userService.getUserDetailsByEmail(token);
+        return user.map(ResponseEntity::ok).orElseGet(() -> ResponseEntity.notFound().build());
+    }
 
 @PostMapping("/register")
 public ResponseEntity<?> registerUser(@RequestBody UserModel user, BindingResult result) {
@@ -45,7 +59,44 @@ public ResponseEntity<?> registerUser(@RequestBody UserModel user, BindingResult
             return ResponseEntity.status(401).body(loginResponse.get("error"));
         }
     
+     // Extract token
+     String token = (String) loginResponse.get("token");
     
-        return ResponseEntity.ok(loginResponse);
+     // Create and set the cookie
+     Cookie cookie = new Cookie("jwt", token);
+     cookie.setHttpOnly(true);
+     cookie.setSecure(true);
+     cookie.setPath("/");
+     cookie.setMaxAge(60 * 60 * 24);  // 1 day
+ 
+     response.addCookie(cookie);
+     return ResponseEntity.ok(loginResponse);
+    }
+
+    @PostMapping("/logout")
+    public ResponseEntity<?> logoutUser(HttpServletResponse response) {
+        // Invalidate the JWT cookie
+        Cookie cookie = new Cookie("jwt", null);
+        cookie.setHttpOnly(true);
+        cookie.setSecure(true);
+        cookie.setPath("/");
+        cookie.setMaxAge(0); // Expire immediately
+
+        response.addCookie(cookie);
+
+        return ResponseEntity.ok("Logout successful");
+    }
+    // Helper method to extract JWT token from cookies 
+    private String getJwtFromCookies(HttpServletRequest request) {
+      Cookie[] cookies = request.getCookies();
+      if (cookies == null) {
+        return null;  // No cookies in request
+      }
+      for (Cookie cookie : cookies) {
+        if ("jwt".equals(cookie.getName())) {
+            return cookie.getValue();
+        }
+      }
+     return null;  // No JWT token in cookies
     }
 }
