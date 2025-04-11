@@ -16,7 +16,7 @@ public class CorsConfig {
 
         // Allow your specific frontend domains
         config.addAllowedOrigin("http://localhost:3000"); // Local development
-        config.addAllowedOrigin("https://react-movies-l35s.onrender.com"); // Production frontend
+        config.addAllowedOrigin("https://digital-movie-application.onrender.com"); // Production frontend
 
         // Allow all methods (GET, POST, etc.)
         config.addAllowedMethod("*");
